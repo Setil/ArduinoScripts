@@ -1,8 +1,7 @@
 #include <SPI.h> //Ethernet shield
 #include <Ethernet.h> //Ethernet shield
-#include <PubSubClient.h> //MQTT
 
-#include <Arduino_JSON.h>
+#include <PubSubClient.h> //MQTT
 
 #include <OneWire.h> //Temperature
 #include <DallasTemperature.h> //Temperature
@@ -21,11 +20,15 @@ DallasTemperature sensors(&oneWire);
 EthernetClient ethClient;
 PubSubClient client(ethClient);
 
+char* monitorConnectedTopic = "/heat/temperatureMonitor";
+String thermometersCountTopic = "/heat/thermometersCount";
+String thermometersAddressTopic = "/heat/thermometersAddress";
+String thermometersInfoTopicStart = "/heat/";
 void setup()
 {    
   Serial.begin(9600);  
   Serial.println("Setup started");
-  //sensors.begin();      
+  sensors.begin();      
   initializeEthernet();
   initializeMQTT();
   Serial.println("Setup finished");
@@ -36,8 +39,8 @@ void setup()
 void initializeMQTT(){
   Serial.println("MQTT initialize started");
   client.setServer(server, 1883);
-  if (client.connect("/heat/temperature")) {
-    client.publish("/heat/temperature", "OK");    
+  if (client.connect(monitorConnectedTopic)) {
+    sendMQTTMessage(monitorConnectedTopic, "OK");    
     Serial.println("MQTT Working");
     //client.subscribe("/myhome/in/#");
   }
@@ -64,6 +67,7 @@ void initializeEthernet(){
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+  /*Example of receiving commands from MQTT*/
   /*payload[length] = '\0';
   Serial.print(topic);
   Serial.print("  ");
@@ -83,29 +87,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void loop(void)
 {
-  /*JSONVar result = checkThermometers();  
-  Serial.println(JSON.stringify(result));  
-  Serial.println("DONE");
-  delay(1000);*/
+  checkThermometers();    
+  delay(1000);
 }
 
-JSONVar checkThermometers(){
+void sendMQTTMessage(String topic, String message){
+  Serial.println(topic + ": " + message);  
+  client.publish(topic.c_str(),message.c_str());    
+}
+
+void checkThermometers(){
   int totalThermometers = sensors.getDeviceCount();
   oneWire.reset_search();
   DeviceAddress currentThermometer;  
-  JSONVar result;
-  result["totalThermometers"] = totalThermometers;
-  JSONVar thermometersJson;
+  sendMQTTMessage(thermometersCountTopic, String(totalThermometers));
+  String allAddress = "";
   sensors.requestTemperatures(); 
-  for (int i = 0;  i < totalThermometers;  i++) {
-    JSONVar thermometer;
+  for (int i = 0;  i < totalThermometers;  i++) {    
     sensors.getAddress(currentThermometer,i);
-    thermometer["address"] = convertAddressToString(currentThermometer);
-    thermometer["temperatureC"] = sensors.getTempC(currentThermometer);
-    thermometersJson[i]=thermometer;
-  }
-  result["thermometers"] = thermometersJson;
-  return result;
+    String address = convertAddressToString(currentThermometer);
+    allAddress = allAddress + address + " ";    
+    sendMQTTMessage(thermometersInfoTopicStart + address, String(sensors.getTempC(currentThermometer)));    
+  }  
+  sendMQTTMessage(thermometersAddressTopic, allAddress);
 }
 
 /* got from https://handyman.dulare.com/esp8266-ds18b20-web-server/ */
