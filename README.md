@@ -20,3 +20,6 @@ COAlarm only sends it's ID when alarm is triggered (by real CO (smoke) or by pre
 COAlarm send only one message when alaram is triggered (when CO ppt becomes greater 100). No additional messages when CO ppt continue to increase.  No message when disalarm (smoke is gone (CO ppt less than 100) or shutdown by long press test button). 
 
 Alarm ID is hardcoded and checked to prevent fake alarms from other wireless items
+
+# Main Sketch
+Arduino scketch combining multiple devices in on script
