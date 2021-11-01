@@ -21,5 +21,8 @@ COAlarm send only one message when alaram is triggered (when CO ppt becomes grea
 
 Alarm ID is hardcoded and checked to prevent fake alarms from other wireless items
 
+# Main Sketch
+Arduino scketch combining multiple devices in on script
+
 # MHZ19C_UART
 Arduino scketch for reading CO2 PPM data from MHZ19C sensor
