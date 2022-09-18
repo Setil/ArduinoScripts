@@ -11,6 +11,11 @@ Script sends info in topics:
 /heat/thermometersAddress - mac-addresses of all thermometers separated by space
 
 /heat/<mac-address> - temperature in C of concreete thremometer
+# DS1820_to_MQTT_with_command_received
+
+* send thermometer info to MQTT topics
+* control heating based on thermometer info
+* control heating based on commands received from MQTT
 
 #  WL101-341_to_MQTT
 Arduino scketch for sending alarm message from carbon monoxide alarm sensor via wireless 433MHz received by WL101-341 to MQTT .
