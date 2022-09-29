@@ -93,6 +93,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void loop(void)
 {
+  if (!client.connected()){
+    initializeMQTT();
+  }  
   sendMQTTMessage(arduinoAliveTopic, "OK");
   client.loop();
   checkThermometers();    
@@ -101,7 +104,7 @@ void loop(void)
 }
 
 void sendMQTTMessage(String topic, String message){
-  Serial.println(topic + ": " + message);  
+  Serial.println("to MQTT: " + topic + ": " + message);  
   client.publish(topic.c_str(),message.c_str());    
 }
 
