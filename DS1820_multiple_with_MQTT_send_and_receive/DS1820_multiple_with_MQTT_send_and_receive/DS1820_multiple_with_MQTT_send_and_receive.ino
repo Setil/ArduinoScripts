@@ -93,14 +93,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void loop(void)
 {
-  if (!client.connected()){
-    initializeMQTT();
-  }  
-  sendMQTTMessage(arduinoAliveTopic, "OK");
+  checkConnections();
   client.loop();
   checkThermometers();    
   checkBatary();
-  delay(60000);
+  delay(10000);
+}
+
+void checkConnections(){
+  if (!ethClient.connected()){
+    initializeEthernet();
+    initializeMQTT();
+  }
+  if (!client.connected()){
+    initializeMQTT();
+  } 
+  sendMQTTMessage(arduinoAliveTopic, "OK");
 }
 
 void sendMQTTMessage(String topic, String message){
