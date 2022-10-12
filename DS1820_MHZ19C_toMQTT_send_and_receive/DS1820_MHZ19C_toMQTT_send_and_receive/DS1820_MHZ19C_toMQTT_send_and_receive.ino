@@ -1,8 +1,7 @@
 #include <SPI.h> //Ethernet shield
 #include <Ethernet.h> //Ethernet shield
-
+#include <MHZ.h> //MHZ19C
 #include <PubSubClient.h> //MQTT
-
 #include <OneWire.h> //Temperature
 #include <DallasTemperature.h> //Temperature
 /*
@@ -13,8 +12,7 @@
  */
  
 #include <Arduino.h>
-#include "MHZ19_uart.h" //MHZ19
-
+#define CO2_IN 3
 #define ONE_WIRE_BUS 8
 #define TEMPERATURE_PRECISION 12
 #define bataryController  7
@@ -28,8 +26,7 @@ DallasTemperature sensors(&oneWire);
 
 EthernetClient ethClient;
 PubSubClient client(ethClient);
-MHZ19_uart mhz19;
-
+MHZ co2(CO2_IN, MHZ19C);
 char* monitorConnectedTopic = "/heat/temperatureMonitor";
 String thermometersCountTopic = "/heat/thermometersCount";
 String thermometersAddressTopic = "/heat/thermometersAddress";
@@ -57,17 +54,21 @@ void setup()
 }
 
 void initializeMHZ19(){
-  mhz19.begin(10, 11);
-  mhz19.setAutoCalibration(true);
-  int status = mhz19.getStatus();
-  Serial.println("CO2 Status:");
-  Serial.print(status);
-  //Need to wait until initialization finished
-  delay(2000);
-  
-  status = mhz19.getStatus(); //second time will reseive normal status
-  Serial.println("CO2 Status:");
-  Serial.print(status);
+  pinMode(CO2_IN, INPUT);
+  delay(100);
+  Serial.println("MHZ 19B");
+
+  // enable debug to get addition information
+  // co2.setDebug(true);
+
+  if (co2.isPreHeating()) {
+    Serial.print("Preheating");
+    while (co2.isPreHeating()) {
+      Serial.print(".");
+      delay(5000);
+    }
+    Serial.println();
+    }
 }
 
 void initializeMQTT(){
@@ -199,5 +200,5 @@ String convertAddressToString(DeviceAddress deviceAddress) {
 }
 
 void checkCo2Sensor(){
-  sendMQTTMessage(co2Topic, String(mhz19.getPPM()));
+  sendMQTTMessage(co2Topic, String(co2.readCO2PWM()));
 }
