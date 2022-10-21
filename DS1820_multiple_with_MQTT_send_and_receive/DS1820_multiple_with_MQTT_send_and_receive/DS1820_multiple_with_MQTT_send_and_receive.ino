@@ -16,11 +16,6 @@ byte server[] = { 192, 168, 1, 180 };
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-//http://wiki.amperka.ru/продукты:ds18b20
-// создаём указатель массив для хранения адресов термометров
-DeviceAddress *thermometersUnique;
-// количество термометров на шине
-int thermometersCount;
 
 EthernetClient ethClient;
 PubSubClient client(ethClient);
@@ -34,7 +29,6 @@ char* bataryActionTopic = "/heat/batary1/turn";
 String thermometersInfoTopicStart = "/heat/";
 String arduinoAliveTopic = "/alive/arduino/";
 String roomThermometerAddress = "28ab9707b6013c6e";
-
 float roomThermometerValue = 0;
 
 bool bataryIsHot = true;
@@ -46,23 +40,8 @@ void setup()
   initializeEthernet();
   initializeMQTT();
   pinMode(bataryController, OUTPUT);
-  initializeThermometers();
   Serial.println("Setup finished");  
   delay(500);//Wait for newly restarted system to stabilize
-}
-
-void initializeThermometers(){
-  Serial.println("Initialize thermometers started");
-  sensors.begin();
-  thermometersCount = sensors.getDeviceCount();  
- // делаем запрос на получение адресов датчиков
-  for (int i = 0; i < thermometersCount; i++) {
-    sensors.getAddress(thermometersUnique[i], i);
-  }  
-  for (int i=0; i<thermometersCount; i++){
-    sendMQTTMessage("thermometersAddressTopic", convertAddressToString(thermometersUnique[i]));
-  }
-  Serial.println("Initialize thermometers finished");
 }
 
 void initializeMQTT(){
@@ -151,17 +130,25 @@ void switchBataryToHot(bool setHot){
 }
 
 void checkThermometers(){
+  int totalThermometers = sensors.getDeviceCount();
+  oneWire.reset_search();
   DeviceAddress currentThermometer;  
+  sendMQTTMessage(thermometersCountTopic, String(totalThermometers));
+  String allAddress = "";
   sensors.requestTemperatures(); 
-  for (int i = 0;  i < thermometersCount;  i++) {    
-    float currentThermometerValue = sensors.getTempC(thermometersUnique[i]);    
-    String address = convertAddressToString(thermometersUnique[i]);    
+  for (int i = 0;  i < totalThermometers;  i++) {    
+    sensors.getAddress(currentThermometer,i);
+    String address = convertAddressToString(currentThermometer);
+    float currentThermometerValue = sensors.getTempC(currentThermometer);    
     if (address == "28ab9707b6013c6e") {
       roomThermometerValue = currentThermometerValue;
       sendMQTTMessage(thermometerTmpTopic, String(currentThermometerValue));          
     }
+    allAddress = allAddress + address + " ";    
     sendMQTTMessage(thermometersInfoTopicStart + address, String(currentThermometerValue));    
   }  
+  sendMQTTMessage(thermometersAddressTopic, allAddress);
+  
 }
 
 void checkBatary(){
