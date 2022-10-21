@@ -48,9 +48,11 @@ void initializeThermometers(){
   for (int i = 0; i < countSensors; i++) {
     sensors.getAddress(sensorsUnique[i], i);
   }
+  String allAddress = " ";
   for (int i = 0; i < countSensors; i++) {
-    sendMQTTMessage("/heat/thermometersAddress", convertAddressToString(sensorsUnique[i]));
+    allAddress += " " + convertAddressToString(sensorsUnique[i]);
   }
+  sendMQTTMessage("/heat/thermometersAddress", allAddress);
 }
 
 void initializeMQTT(){
