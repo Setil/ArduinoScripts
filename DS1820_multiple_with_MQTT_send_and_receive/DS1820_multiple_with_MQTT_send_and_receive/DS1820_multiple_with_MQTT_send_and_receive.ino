@@ -21,71 +21,80 @@ EthernetClient ethClient;
 PubSubClient client(ethClient);
 
 char* monitorConnectedTopic = "/heat/temperatureMonitor";
-String thermometersCountTopic = "/heat/thermometersCount";
-String thermometersAddressTopic = "/heat/thermometersAddress";
-String thermometerTmpTopic = "/heat/termometer1";
 String bataryControllerTopic = "/heat/batary1";
-char* bataryActionTopic = "/heat/batary1/turn";
-String thermometersInfoTopicStart = "/heat/";
-String arduinoAliveTopic = "/alive/arduino/";
-String roomThermometerAddress = "28ab9707b6013c6e";
 float roomThermometerValue = 0;
 
 bool bataryIsHot = true;
 void setup()
 {    
   Serial.begin(9600);  
-  Serial.println("Setup started");
-  sensors.begin();      
+  Serial.println("Setup>"); 
   initializeEthernet();
   initializeMQTT();
   pinMode(bataryController, OUTPUT);
-  Serial.println("Setup finished");  
+  initializeThermometers();
+  Serial.println("Setup<");  
   delay(500);//Wait for newly restarted system to stabilize
 }
 
+DeviceAddress *sensorsUnique;
+// количество датчиков на шине
+int countSensors;
+
+void initializeThermometers(){
+  sensors.begin();
+  countSensors = sensors.getDeviceCount();
+  sensorsUnique = new DeviceAddress[countSensors];
+  for (int i = 0; i < countSensors; i++) {
+    sensors.getAddress(sensorsUnique[i], i);
+  }
+  for (int i = 0; i < countSensors; i++) {
+    sendMQTTMessage("/heat/thermometersAddress", convertAddressToString(sensorsUnique[i]));
+  }
+}
+
 void initializeMQTT(){
-  Serial.println("MQTT initialize started");
+  Serial.println("MQTT>");
   client.setServer(server, 8083 );
   client.setCallback(callback);
   
   if (client.connect(monitorConnectedTopic)) {
     sendMQTTMessage(monitorConnectedTopic, "OK");    
-    Serial.println("MQTT Working");
+    Serial.println("MQTT+");
   }
   else{
-    Serial.println("MQTT not connected");
+    Serial.println("MQTT-");
   }
   client.subscribe("/heat/batary1/turn");
-  Serial.println("MQTT initialize finished");
+  Serial.println("MQTT<");
 }
 
 void initializeEthernet(){
-  Serial.println("Ethernet initialize started");
+  Serial.println("Ethernet>");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+      Serial.println("Ethernet shield was not found");
     } else if (Ethernet.linkStatus() == LinkOFF) {
-      Serial.println("Ethernet cable is not connected.");
+      Serial.println("Ethernet cable is not connected");
     }    
   }else{
-    Serial.print("My IP address: ");
+    Serial.print("IP address: ");
     Serial.println(Ethernet.localIP());  
   }  
-  Serial.println("Ethernet initialize finished");
+  Serial.println("Ethernet<");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   /*Example of receiving commands from MQTT*/
-  Serial.println("Message received");
+  Serial.println("Received");
   payload[length] = '\0';
   Serial.print(topic);
   Serial.print("  ");
   String strTopic = String(topic);
   String strPayload = String((char*)payload);
   Serial.println(strPayload);
-  if (strTopic == bataryActionTopic) {
+  if (strTopic == "/heat/batary1/turn") {
     if (strPayload == "1")     switchBataryToHot(true);
     else if (strPayload == "0") switchBataryToHot(false);
   }  
@@ -108,7 +117,7 @@ void checkConnections(){
   if (!client.connected()){
     initializeMQTT();
   } 
-  sendMQTTMessage(arduinoAliveTopic, "OK");
+  sendMQTTMessage("/alive/arduino/", "OK");
 }
 
 void sendMQTTMessage(String topic, String message){
@@ -130,25 +139,16 @@ void switchBataryToHot(bool setHot){
 }
 
 void checkThermometers(){
-  int totalThermometers = sensors.getDeviceCount();
-  oneWire.reset_search();
-  DeviceAddress currentThermometer;  
-  sendMQTTMessage(thermometersCountTopic, String(totalThermometers));
-  String allAddress = "";
   sensors.requestTemperatures(); 
-  for (int i = 0;  i < totalThermometers;  i++) {    
-    sensors.getAddress(currentThermometer,i);
-    String address = convertAddressToString(currentThermometer);
-    float currentThermometerValue = sensors.getTempC(currentThermometer);    
+  for (int i = 0;  i < countSensors;  i++) {    
+    String address = convertAddressToString(sensorsUnique[i]);
+    float currentThermometerValue = sensors.getTempC(sensorsUnique[i]);    
     if (address == "28ab9707b6013c6e") {
       roomThermometerValue = currentThermometerValue;
-      sendMQTTMessage(thermometerTmpTopic, String(currentThermometerValue));          
+      sendMQTTMessage("/heat/termometer1", String(currentThermometerValue));          
     }
-    allAddress = allAddress + address + " ";    
-    sendMQTTMessage(thermometersInfoTopicStart + address, String(currentThermometerValue));    
+    sendMQTTMessage("/heat/" + address, String(currentThermometerValue));    
   }  
-  sendMQTTMessage(thermometersAddressTopic, allAddress);
-  
 }
 
 void checkBatary(){
