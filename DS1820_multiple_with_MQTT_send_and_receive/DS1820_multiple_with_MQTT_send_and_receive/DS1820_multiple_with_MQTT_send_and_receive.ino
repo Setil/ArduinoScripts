@@ -44,10 +44,18 @@ int countSensors;
 void initializeThermometers(){
   sensors.begin();
   countSensors = sensors.getDeviceCount();
-  sensorsUnique = new DeviceAddress[countSensors];
-  for (int i = 0; i < countSensors; i++) {
-    sensors.getAddress(sensorsUnique[i], i);
-  }
+  
+  sensorsUnique = new DeviceAddress[4]{
+    //28ab9707b6013c6e
+    {0x28, 0xAB, 0x97, 0x07, 0xB6, 0x01, 0x3C, 0x6E},
+    //28761007b6013c7a    
+    {0x28, 0x76, 0x310, 0x07, 0xB6, 0x01, 0x3C, 0x7A},
+    //2893c707b6013cb7
+    {0x28, 0x93, 0xC7, 0x07, 0xB6, 0x01, 0x3C, 0xB7},
+    //280b0c79a20003a7
+    {0x28, 0x0B, 0x0C, 0x79, 0xA2, 0x00, 0x03, 0xA7}
+    };
+  
   String allAddress = " ";
   for (int i = 0; i < countSensors; i++) {
     allAddress += " " + convertAddressToString(sensorsUnique[i]);
@@ -144,7 +152,7 @@ void checkThermometers(){
   sensors.requestTemperatures(); 
   for (int i = 0;  i < countSensors;  i++) {    
     String address = convertAddressToString(sensorsUnique[i]);
-    float currentThermometerValue = sensors.getTempC(sensorsUnique[i]);    
+    float currentThermometerValue = sensors.getTempC(sensorsUnique[i]);
     if (address == "28ab9707b6013c6e") {
       roomThermometerValue = currentThermometerValue;
       sendMQTTMessage("/heat/termometer1", String(currentThermometerValue));          
