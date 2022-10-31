@@ -9,6 +9,7 @@
 #define ONE_WIRE_BUS 8
 #define TEMPERATURE_PRECISION 12
 #define bataryController  7
+#define pump1 2
 byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
 };
@@ -22,9 +23,11 @@ PubSubClient client(ethClient);
 
 char* monitorConnectedTopic = "/heat/temperatureMonitor";
 String bataryControllerTopic = "/heat/batary1";
+String pump1ControllerTopic = "/heat/pump1";
 float roomThermometerValue = 0;
 
 bool bataryIsHot = true;
+bool pump1IsOn = true;
 void setup()
 {    
   Serial.begin(9600);  
@@ -32,6 +35,7 @@ void setup()
   initializeEthernet();
   initializeMQTT();
   pinMode(bataryController, OUTPUT);
+  pinMode(pump1, OUTPUT);
   initializeThermometers();
   Serial.println("Setup<");  
   delay(500);//Wait for newly restarted system to stabilize
@@ -110,6 +114,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (strPayload == "1")     switchBataryToHot(true);
     else if (strPayload == "0") switchBataryToHot(false);
   }  
+  if (strTopic == "/heat/pump1/turn")  {
+    if (strPayload == "1")     switchPump1ToOn(true);
+    else if (strPayload == "0") switchPump1ToOn(false);
+  }
 }
 
 void loop(void)
@@ -147,6 +155,19 @@ void switchBataryToHot(bool setHot){
     digitalWrite(bataryController, LOW);
     bataryIsHot = false;
     sendMQTTMessage(bataryControllerTopic, String(bataryIsHot));
+  }
+}
+
+void switchPump1ToOn(bool setOn){
+  if (setOn && !pump1IsOn){
+    digitalWrite(pump1, HIGH);
+    pump1IsOn = true;
+    sendMQTTMessage(pump1ControllerTopic, String(pump1IsOn));
+  }
+  if (!setOn && pump1IsOn){
+    digitalWrite(pump1, LOW);
+    pump1IsOn = false;
+    sendMQTTMessage(pump1ControllerTopic, String(pump1IsOn));
   }
 }
 
