@@ -85,6 +85,7 @@ void initializeMQTT(){
     Serial.println("MQTT-");
   }
   client.subscribe("/heat/batary1/turn");
+  client.subscribe("/heat/pump1/turn");
   Serial.println("MQTT<");
 }
 
