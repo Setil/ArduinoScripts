@@ -129,6 +129,7 @@ void loop(void)
   client.loop();
   checkThermometers();    
   checkBatary();
+  sendMQTTMessage(pump1ControllerTopic, String(pump1IsOn));
   delay(10000);
 }
 
