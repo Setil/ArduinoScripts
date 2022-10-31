@@ -37,6 +37,9 @@ void setup()
   pinMode(bataryController, OUTPUT);
   pinMode(pump1, OUTPUT);
   initializeThermometers();
+  //update initial states
+  switchBataryToHot(true);
+  switchPump1ToOn(true);
   Serial.println("Setup<");  
   delay(500);//Wait for newly restarted system to stabilize
 }
